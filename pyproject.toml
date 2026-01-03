@@ -1,0 +1,16 @@
+[project]
+name = "vit-se-project"
+version = "0.1.0"
+description = "Mini-ViT implementation for CIFAR-10"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "torchvision",
+    "numpy",
+    "tqdm",
+    "ipykernel>=7.1.0",
+]
+
+[tool.uv]
+package = false
