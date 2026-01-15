@@ -28,9 +28,10 @@ class PatchEmbedding(nn.Module):
 
 
 class CLSToken(nn.Module):
-    def __init__(self, emb_dim):
+    def __init__(self, emb_dim, num_cls=1):
         super(CLSToken, self).__init__()
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, emb_dim))
+        self.num_cls = num_cls
+        self.cls_token = nn.Parameter(torch.zeros(1, num_cls, emb_dim))
 
     def forward(self, x):
         batch_size = x.shape[0]
@@ -39,21 +40,22 @@ class CLSToken(nn.Module):
         return x
     
     def __str__(self):
-        return f"CLSToken(emb_dim={self.cls_token.shape[-1]})"
+        return f"CLSToken(emb_dim={self.cls_token.shape[-1]}, num_cls={self.num_cls})"
     
     def __repr__(self):
         return self.__str__()
 
 
 class PositionalEmbedding(nn.Module):
-    def __init__(self, width, height, emb_dim):
+    def __init__(self, width, height, emb_dim, num_cls=1):
         super(PositionalEmbedding, self).__init__()
         self.width = width
         self.height = height
         self.n_patches = width * height
         self.emb_dim = emb_dim
+        self.num_cls = num_cls
         pos_emb = self._2d_positional_encoding(self.emb_dim)
-        cls_emb = torch.zeros(1, 1, emb_dim)
+        cls_emb = torch.zeros(1, num_cls, emb_dim)
         pos_emb = torch.cat([cls_emb, pos_emb.unsqueeze(0)], dim=1)
         self.register_buffer("pos_emb", pos_emb)
         
@@ -75,7 +77,7 @@ class PositionalEmbedding(nn.Module):
 
     def forward(self, x):
         batch_size, n_tokens, emb_dim = x.shape
-        assert n_tokens == self.n_patches + 1
+        assert n_tokens == self.n_patches + self.num_cls
         pos_emb = self.pos_emb
         if pos_emb.device != x.device or pos_emb.dtype != x.dtype:
             pos_emb = pos_emb.to(device=x.device, dtype=x.dtype)
@@ -83,19 +85,19 @@ class PositionalEmbedding(nn.Module):
         return x
     
     def __str__(self):
-        return f"PositionalEmbedding(width={self.width}, height={self.height}, emb_dim={self.emb_dim}, n_patches={self.n_patches})"
+        return f"PositionalEmbedding(width={self.width}, height={self.height}, emb_dim={self.emb_dim}, n_patches={self.n_patches}, num_cls={self.num_cls})"
     
     def __repr__(self):
         return self.__str__()
 
 
 class MiniViTEmbedding(nn.Module):
-    def __init__(self, in_channels=3, emb_dim=192, patch_size=16, img_size=224):
+    def __init__(self, in_channels=3, emb_dim=192, patch_size=16, img_size=224, num_cls=1):
         super(MiniViTEmbedding, self).__init__()
         self.patch_embedding = PatchEmbedding(in_channels, emb_dim, patch_size, img_size)
         n_patches_per_side = img_size // patch_size
-        self.cls_token = CLSToken(emb_dim)
-        self.positional_embedding = PositionalEmbedding(n_patches_per_side, n_patches_per_side, emb_dim)
+        self.cls_token = CLSToken(emb_dim, num_cls)
+        self.positional_embedding = PositionalEmbedding(n_patches_per_side, n_patches_per_side, emb_dim, num_cls)
 
     def forward(self, x):
         x = self.patch_embedding(x)
@@ -154,17 +156,20 @@ class Encoder(nn.Module):
 class MiniViT(nn.Module):
     def __init__(self, in_channels=3, img_size=224, patch_size=16, emb_dim=192,
                  n_layers=6, n_heads=3, mlp_hidden_dim=768, dropout=0.1, bias=False,
-                 n_classes=1000):
+                 n_classes=1000, num_cls=1):
         super(MiniViT, self).__init__()
-        self.embedding = MiniViTEmbedding(in_channels, emb_dim, patch_size, img_size)
+        self.num_cls = num_cls
+        self.emb_dim = emb_dim
+        self.embedding = MiniViTEmbedding(in_channels, emb_dim, patch_size, img_size, num_cls)
         self.encoder = Encoder(n_layers, emb_dim, n_heads, mlp_hidden_dim, dropout, bias)
-        self.classifier = nn.Linear(emb_dim, n_classes)
+        self.classifier = nn.Linear(emb_dim * num_cls, n_classes)
 
     def forward(self, x):
         x = self.embedding(x)
         x = self.encoder(x)
-        cls_token_final = x[:, 0]
-        logits = self.classifier(cls_token_final)
+        cls_tokens = x[:, :self.num_cls, :]
+        cls_tokens = cls_tokens.reshape(x.shape[0], self.num_cls * self.emb_dim)
+        logits = self.classifier(cls_tokens)
         return logits
     
     def __str__(self):
