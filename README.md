@@ -56,6 +56,7 @@ Beyond the base requirements, this implementation includes:
 
 ## Results
 
+### training.py - Production Training
 **Best Model Performance:**
 - Test Accuracy: **93.50%**
 - Model Parameters: 674,890
@@ -70,6 +71,24 @@ Optimizer: AdamW (weight decay: 0.05)
 Scheduler: Cosine annealing with 10-epoch warmup
 Augmentation: CutMix + AutoAugment + Random Erasing + 3x repeated sampling
 ```
+
+### training_advanced.ipynb - Extended Training
+**Advanced Model Performance:**
+- Test Accuracy: **94.83%** (best validation), **94.71%** (final test)
+- Model Parameters: 1,476,042
+- Training Duration: 150 epochs
+- Architecture: 12 layers, 12 heads, 192-dim embeddings, 1 CLS token
+
+Training configuration:
+```
+Batch size: 256
+Learning rate: 0.001
+Optimizer: AdamW (weight decay: 0.05)
+Scheduler: Cosine annealing with 15-epoch warmup
+Augmentation: MixUp + CutMix + AutoAugment + Random Erasing + 3x repeated sampling
+```
+
+> **Note**: The advanced model uses a deeper architecture (12 vs 9 layers) with wider embeddings (192 vs 96 dim) and combines both MixUp and CutMix augmentations, achieving a **+1.33% improvement** over the production model.
 
 ## Setup
 
@@ -100,7 +119,7 @@ pip install -e .
 ### Quick Start - Best Model
 Reproduce the best result (93.5% accuracy):
 ```bash
-python finetune.py \
+python training.py \
   --epochs 250 \
   --batch-size 512 \
   --lr 0.002 \
@@ -116,12 +135,12 @@ python finetune.py \
 ### Basic Training
 Minimal training run with default settings:
 ```bash
-python finetune.py
+python training.py
 ```
 
 ### Custom Configuration
 ```bash
-python finetune.py \
+python training.py \
   --epochs 100 \
   --batch-size 256 \
   --lr 0.001 \
@@ -161,7 +180,7 @@ python finetune.py \
 ### Notebooks
 
 Interactive exploration and experimentation:
-- `finetune.ipynb`: Training experiments and visualization
+- `training.ipynb`: Training experiments and visualization
 - `inference.ipynb`: Model evaluation and prediction
 - `test.ipynb`: Model testing and validation
 
@@ -174,8 +193,8 @@ vit_se_project/
 │       ├── attention.py      # Multi-Head Self-Attention implementation
 │       ├── layers.py         # MLP and auxiliary layers
 │       └── mini_vit.py       # Main ViT architecture
-├── finetune.py              # Training script
-├── finetune/
+├── training.py              # Training script
+├── training/
 │   └── checkpoints/         # Saved model checkpoints
 ├── data/                    # CIFAR-10 dataset (auto-downloaded)
 ├── pyproject.toml           # Dependencies

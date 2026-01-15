@@ -224,7 +224,7 @@ def parse_args():
     # Other parameters
     parser.add_argument('--num-workers', type=int, default=4, help='Number of data loading workers')
     parser.add_argument('--eval-epochs', type=int, default=5, help='Evaluate every N epochs')
-    parser.add_argument('--checkpoint-dir', type=str, default='finetune/checkpoints', help='Checkpoint directory')
+    parser.add_argument('--checkpoint-dir', type=str, default='training/checkpoints', help='Checkpoint directory')
     parser.add_argument('--log-file', type=str, default='training_log.txt', help='Training log file')
     
     return parser.parse_args()
